@@ -1,48 +1,77 @@
-# How to Add a New Table to the Database
+# Quickstart Guide: Incorporating this DB Migration System into your CIC Project
 
-This guide explains how to add a new table to the database in the Virtual Care Interaction project.
+\*NOTE: This guide assumes you're using the current CDK architecture used at the CIC as of July 29th, 2025. If not, adjust steps accordingly.
 
-## Adding a New Table
+## Step 1 - Adding the necessary files
 
-To add a new tables/columns or alter/remove existing ones, you only need to modify the `migrations.py` file:
+Download the `db_setup` folder provided in this repository, and add it to the `./cdk/lambda/` directory of your current project.
 
-1. Define a function that returns the SQL for your new table
-2. Register the migration in the `get_all_migrations()` function
+## Step 2 - Integrating the new files with your database stack
 
-### Example
+Navigate to the file in which you configure your database stack and invoke its initializer function to populate and create tables. Alter the code to point towards the `lambda/db_setup` directory for your intializer function.
 
-```python
-# 1. Define a function that returns the SQL for your new table
-def get_analytics_table_sql():
-    """SQL for creating the analytics table"""
-    return """
-    CREATE TABLE IF NOT EXISTS "analytics" (
-        "analytics_id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
-        "user_id" uuid,
-        "page_viewed" varchar,
-        "time_spent" integer,
-        "recorded_at" timestamp DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE CASCADE ON UPDATE CASCADE
-    );
-    """
+For the current project architecture at the CIC (at the time of writing this), this can be found at `./cdk/lib/dbFlow-stack.ts`, in the following code snippet:
 
-# 2. In the get_all_migrations function, add this line:
-register_migration("add_analytics_table", get_analytics_table_sql())
+```typescript
+const initializerLambda = new triggers.TriggerFunction(
+  this,
+  `${id}-triggerLambda`,
+  {
+    description: `Database initializer and migration runner - ${new Date().toISOString()}`,
+    functionName: `${id}-initializerFunction`,
+    runtime: lambda.Runtime.PYTHON_3_9,
+    handler: "initializer.handler",
+    timeout: Duration.seconds(300),
+    memorySize: 512,
+    environment: {
+      DB_SECRET_NAME: db.secretPathAdminName,
+      DB_USER_SECRET_NAME: db.secretPathUser.secretName,
+      DB_PROXY: db.secretPathTableCreator.secretName,
+    },
+    vpc: db.dbInstance.vpc,
+    code: lambda.Code.fromAsset("lambda/db_setup"), // MAKE SURE THIS LINE IS CONFIGURED AS SHOWN
+    layers: [psycopgLambdaLayer],
+    role: lambdaRole,
+  }
+);
 ```
 
-That's it! The migration will be applied automatically during deployment.
+## Step 3 - Setting up your initial schema
 
-## How It Works
+Navigate back to the `./cdk/lambda/db_setup` directory, and open the `migrations.py` file. Scroll down to the following function:
 
-- The system automatically assigns version numbers based on registration order
-- Migrations are tracked in the database, so they're only applied once
-- The system works in both new deployments and existing deployments
-- No need to worry about file system access in Lambda environments
+```python
+def get_initial_schema():
+    """Return the initial schema SQL"""
+    return """
+        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-## Best Practices
+        CREATE TABLE IF NOT EXISTS "users" (
+            "user_id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+            "user_email" varchar UNIQUE,
+            "username" varchar,
+            "first_name" varchar,
+            "last_name" varchar,
+            "time_account_created" timestamp,
+            "roles" varchar[],
+            "last_sign_in" timestamp
+        );
 
-- Use descriptive names for your migration functions and registrations
-- Include `IF NOT EXISTS` in your CREATE TABLE statements
-- For column additions, check if the column exists before adding it
-- Always include appropriate foreign key constraints
-- Test your migrations locally before deploying
+
+
+        -- Add other initial schema tables and foreign key constraints as needed
+
+    """
+```
+
+and alter the SQL return string to suit your database schema as desired.
+
+### Now, you can either redeploy your project or create a new deployment, and this database migrations system will be successfully incorporated!
+
+## Step 4 - Altering your schema
+
+To take full advantage of database migrations, we should be able to alter our database schema without having to create a full, new deployment; we should only need to redeploy to an existing deployment.
+
+You can now do this with ease, using your newly-added database migration system!
+
+For a detailed guide on this, refer to the [Database Modification Guide](./databaseModificationGuide.md) (which you should now include in the documentation of your current project)
