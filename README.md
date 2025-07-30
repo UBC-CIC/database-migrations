@@ -68,6 +68,8 @@ and alter the SQL return string to suit your database schema as desired.
 
 ### Now, you can either redeploy your project or create a new deployment, and this database migrations system will be successfully incorporated!
 
+*Note: This function will only run once per deployment. Once initialized, your schema cannot be altered by the same get_initial_schema() function, but should instead be altered another way. See the next step for instructions on how to alter your schema.
+
 ## Step 4 - Altering your schema
 
 To take full advantage of database migrations, we should be able to alter our database schema without having to create a full, new deployment; we should only need to redeploy to an existing deployment.
