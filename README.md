@@ -1,4 +1,4 @@
-# Quickstart Guide: Incorporating this DB Migration System into your CIC Project
+# Quickstart Guide: Incorporating this DB Migration System into your UBC CIC Project
 
 \*NOTE: This guide assumes you're using the current CDK architecture used at the CIC as of July 29th, 2025. If not, adjust steps accordingly.
 
