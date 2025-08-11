@@ -1,4 +1,4 @@
-# Database Migration System
+# Quickstart Guide: Incorporating this DB Migration System into your UBC CIC Project
 
 A simple, drag-and-drop database migration system for AWS Lambda projects using PostgreSQL.
 
@@ -30,7 +30,7 @@ const initializerLambda = new triggers.TriggerFunction(
       DB_PROXY: db.secretPathTableCreator.secretName, // Optional
     },
     vpc: db.dbInstance.vpc,
-    code: lambda.Code.fromAsset("lambda/db_setup"),
+    code: lambda.Code.fromAsset("lambda/db_setup"), // MAKE SURE IT USES THIS SPECIFIC FOLDER!
     layers: [psycopgLambdaLayer],
     role: lambdaRole,
   }
@@ -51,36 +51,32 @@ Edit `migrations/001_initial_schema.sql` with your database schema:
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE IF NOT EXISTS "users" (
-    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
-    "email" varchar UNIQUE,
-    "created_at" timestamp DEFAULT CURRENT_TIMESTAMP
-);
+        CREATE TABLE IF NOT EXISTS "users" (
+            "user_id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+            "user_email" varchar UNIQUE,
+            "username" varchar,
+            "first_name" varchar,
+            "last_name" varchar,
+            "time_account_created" timestamp,
+            "roles" varchar[],
+            "last_sign_in" timestamp
+        );
 
-CREATE TABLE IF NOT EXISTS "products" (
-    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
-    "name" varchar NOT NULL,
-    "price" decimal(10,2),
-    "user_id" uuid REFERENCES "users"("id")
-);
+
+
+        -- Add other initial schema tables and foreign key constraints as needed
+
+    """
 ```
 
-## Adding New Migrations
+and alter the SQL return string to suit your database schema as desired.
 
-Create numbered SQL files in the `migrations/` directory:
+### Now, you can either redeploy your project or create a new deployment, and this database migrations system will be successfully incorporated!
 
-- `002_add_orders_table.sql`
-- `003_add_user_preferences.sql`
-- `004_add_indexes.sql`
+## Step 4 - Altering your schema
 
-Each file runs once and is tracked automatically. Numbers are technically not needed and will work without them, but it is best practice to include numberings for migration tracking.
+To take full advantage of database migrations, we should be able to alter our database schema without having to create a full, new deployment; we should only need to redeploy to an existing deployment.
 
-## Features
+You can now do this with ease, using your newly-added database migration system!
 
-- **Idempotent**: Migrations run only once
-- **Auto-numbering**: Unnumbered files get sequential numbers
-- **Existing deployments**: Automatically handles databases without migration tracking
-- **User management**: Optional creation of limited-privilege database users
-- **Lambda-optimized**: Works in serverless environments
-
-For detailed migration examples, see [Database Modification Guide](./databaseModificationGuide.md).
+For a detailed guide on this, refer to the [Database Modification Guide](./databaseModificationGuide.md) (which you should now include in the documentation of your current project)
