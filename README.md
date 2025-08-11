@@ -1,16 +1,17 @@
-# Quickstart Guide: Incorporating this DB Migration System into your CIC Project
+# Database Migration System
 
-\*NOTE: This guide assumes you're using the current CDK architecture used at the CIC as of July 29th, 2025. If not, adjust steps accordingly.
+A simple, drag-and-drop database migration system for AWS Lambda projects using PostgreSQL.
 
-## Step 1 - Adding the necessary files
+## Quick Setup
 
-Download the `db_setup` folder provided in this repository, and add it to the `./cdk/lambda/` directory of your current project.
+1. Copy the `db_setup` folder to your project's `lambda/` directory
+2. Configure your CDK stack (see Integration section)
+3. Add your initial schema to `migrations/001_initial_schema.sql`
+4. Deploy your application
 
-## Step 2 - Integrating the new files with your database stack
+## Integration with CDK
 
-Navigate to the file in which you configure your database stack and invoke its initializer function to populate and create tables. Alter the code to point towards the `lambda/db_setup` directory for your intializer function.
-
-For the current project architecture at the CIC (at the time of writing this), this can be found at `./cdk/lib/dbFlow-stack.ts`, in the following code snippet:
+Add this configuration to your database stack file:
 
 ```typescript
 const initializerLambda = new triggers.TriggerFunction(
@@ -25,53 +26,61 @@ const initializerLambda = new triggers.TriggerFunction(
     memorySize: 512,
     environment: {
       DB_SECRET_NAME: db.secretPathAdminName,
-      DB_USER_SECRET_NAME: db.secretPathUser.secretName,
-      DB_PROXY: db.secretPathTableCreator.secretName,
+      DB_USER_SECRET_NAME: db.secretPathUser.secretName, // Optional
+      DB_PROXY: db.secretPathTableCreator.secretName, // Optional
     },
     vpc: db.dbInstance.vpc,
-    code: lambda.Code.fromAsset("lambda/db_setup"), // MAKE SURE THIS LINE IS CONFIGURED AS SHOWN
+    code: lambda.Code.fromAsset("lambda/db_setup"),
     layers: [psycopgLambdaLayer],
     role: lambdaRole,
   }
 );
 ```
 
-## Step 3 - Setting up your initial schema
+## Environment Variables
 
-Navigate back to the `./cdk/lambda/db_setup` directory, and open the `migrations.py` file. Scroll down to the following function:
+- `DB_SECRET_NAME` (required): AWS Secrets Manager secret containing database credentials
+- `DB_USER_SECRET_NAME` (optional): Secret name for storing limited user credentials
+- `DB_PROXY` (optional): Secret name for storing table creator credentials
+- `CREATE_USERS` (optional): Set to "false" to skip user creation (default: "true")
 
-```python
-def get_initial_schema():
-    """Return the initial schema SQL"""
-    return """
-        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+## Initial Schema Setup
 
-        CREATE TABLE IF NOT EXISTS "users" (
-            "user_id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
-            "user_email" varchar UNIQUE,
-            "username" varchar,
-            "first_name" varchar,
-            "last_name" varchar,
-            "time_account_created" timestamp,
-            "roles" varchar[],
-            "last_sign_in" timestamp
-        );
+Edit `migrations/001_initial_schema.sql` with your database schema:
 
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE TABLE IF NOT EXISTS "users" (
+    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+    "email" varchar UNIQUE,
+    "created_at" timestamp DEFAULT CURRENT_TIMESTAMP
+);
 
-        -- Add other initial schema tables and foreign key constraints as needed
-
-    """
+CREATE TABLE IF NOT EXISTS "products" (
+    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+    "name" varchar NOT NULL,
+    "price" decimal(10,2),
+    "user_id" uuid REFERENCES "users"("id")
+);
 ```
 
-and alter the SQL return string to suit your database schema as desired.
+## Adding New Migrations
 
-### Now, you can either redeploy your project or create a new deployment, and this database migrations system will be successfully incorporated!
+Create numbered SQL files in the `migrations/` directory:
 
-## Step 4 - Altering your schema
+- `002_add_orders_table.sql`
+- `003_add_user_preferences.sql`
+- `004_add_indexes.sql`
 
-To take full advantage of database migrations, we should be able to alter our database schema without having to create a full, new deployment; we should only need to redeploy to an existing deployment.
+Each file runs once and is tracked automatically. Numbers are technically not needed and will work without them, but it is best practice to include numberings for migration tracking.
 
-You can now do this with ease, using your newly-added database migration system!
+## Features
 
-For a detailed guide on this, refer to the [Database Modification Guide](./databaseModificationGuide.md) (which you should now include in the documentation of your current project)
+- **Idempotent**: Migrations run only once
+- **Auto-numbering**: Unnumbered files get sequential numbers
+- **Existing deployments**: Automatically handles databases without migration tracking
+- **User management**: Optional creation of limited-privilege database users
+- **Lambda-optimized**: Works in serverless environments
+
+For detailed migration examples, see [Database Modification Guide](./databaseModificationGuide.md).

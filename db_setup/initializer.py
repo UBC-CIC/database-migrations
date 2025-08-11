@@ -50,7 +50,7 @@ def handler(event, context):
         logger.info("Starting database initialization and migrations")
         
         # Run all pending migrations
-        run_migrations(connection)
+        run_migrations(dbSecret)
         
         #
         ## Create users with limited permissions on RDS
@@ -136,6 +136,8 @@ def handler(event, context):
         authInfo = {"username": username, "password": password}
         dbSecret.update(authInfo)
         sm_client.put_secret_value(SecretId=DB_USER_SECRET_NAME, SecretString=json.dumps(dbSecret))
+
+        # Validation complete - migrations and user setup finished
 
         # Close cursor and connection
         cursor.close()

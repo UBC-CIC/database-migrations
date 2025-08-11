@@ -1,51 +1,56 @@
-# How to Add a New Table to the Database
+# Database Migration Guide
 
-This guide explains how to add a new table to the database in the Virtual Care Interaction project.
+This guide explains how to modify your database schema using the migration system.
 
-## Adding a New Table
+## Adding New Tables or Schema Changes
 
-To add a new tables/columns or alter/remove existing ones, you only need to modify the `migrations.py` file:
+To add new tables, columns, or modify existing schema:
 
-1. Define a function that returns the SQL for your new table
-2. Register the migration in the `get_all_migrations()` function
+1. Create a new `.sql` file in the `migrations/` directory
+2. Use sequential numbering: `002_add_products_table.sql`, `003_add_user_preferences.sql`, etc.
+3. Write your SQL migration code
+4. Deploy your application
 
-A (commented-out) example exists in the provided `migrations.py` file, as shown below:
+### Example Migration File
 
-### Example
+Create `migrations/002_add_products_table.sql`:
 
-```python
-# 1. Define a function that returns the SQL for your new table. Make a new function for every change!
-def get_example_table_sql():
-    """SQL for creating an example table and inserting dummy rows"""
-    return """
-    -- Create a generic example table if it doesn't already exist
-    CREATE TABLE IF NOT EXISTS example_table (
-        id    SERIAL PRIMARY KEY,
-        name  TEXT   NOT NULL,
-        flag  BOOLEAN DEFAULT FALSE
-    );
-    """
+```sql
+-- Add products table
+CREATE TABLE IF NOT EXISTS "products" (
+    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+    "name" varchar NOT NULL,
+    "price" decimal(10,2),
+    "created_at" timestamp DEFAULT CURRENT_TIMESTAMP
+);
 
-# 2. In the get_all_migrations function, add this line that invokes the newly defined function above:
-register_migration("add_example_table", get_example_table_sql())
-
-# Add more calls to register_migration() if you have more SQL functions.
+-- Add index for better performance
+CREATE INDEX IF NOT EXISTS idx_products_name ON "products" ("name");
 ```
 
-That's it! The migration will be applied automatically during your next (re)deployment.
+### Adding Columns to Existing Tables
 
-<!-- \*Note: `register_migration()` is an idempotent function, which, in this context, means that it will only apply your defined SQL function once. This is a good thing, as it means you can leave and commit your code as-is, no changes are required after this point, as there is no risk of duplicate tables if you redeploy! -->
+Create `migrations/003_add_user_phone.sql`:
+
+```sql
+-- Add phone column to users table
+ALTER TABLE "users" 
+ADD COLUMN IF NOT EXISTS "phone" varchar;
+```
 
 ## How It Works
 
-- The system automatically assigns version numbers based on registration order
-- Migrations are tracked in the database, so they're only applied once (idempotency)
-- The system works in both new deployments and existing deployments
-- No need to worry about file system access in Lambda environments
+- Migration files are executed in numerical order
+- Each migration is tracked in the `schema_migrations` table
+- Migrations are only applied once (idempotent)
+- Works with both new and existing deployments
+- Auto-numbering for unnumbered files
 
 ## Best Practices
 
-- Use descriptive names for your migration functions and registrations
-- Include `IF NOT EXISTS` in your CREATE TABLE statements
-- For column additions, check if the column exists before adding it
-- Always include appropriate foreign key constraints
+- Use sequential numbering for migration files
+- Include `IF NOT EXISTS` for CREATE statements
+- Use `ADD COLUMN IF NOT EXISTS` for column additions
+- Write descriptive migration names
+- Test migrations on development environment first
+- Keep migrations small and focused
