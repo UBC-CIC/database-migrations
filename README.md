@@ -1,6 +1,6 @@
 # Quickstart Guide: Incorporating this DB Migration System into your AWS CDK Project
 
-A simple, drag-and-drop database migration system for AWS Lambda projects using node-pg-migrations.
+A simple, drag-and-drop database migration system for AWS Lambda projects using node-pg-migrate.
 
 ## Quick Setup
 
@@ -88,39 +88,13 @@ exports.down = (pgm) => {
 
 ### Now, you can either redeploy your project or create a new deployment, and this database migrations system will be successfully incorporated!
 
-## Step 4 - Altering your schema
+## Altering your schema
 
-To take full advantage of database migrations, we should be able to alter our database schema without having to create a full, new deployment; we should only need to redeploy to an existing deployment.
+To take full advantage of database migrations, you should be able to alter your database schema without having to create a full, new deployment; you should only need to redeploy to an existing deployment.
 
 You can now do this with ease, using your newly-added database migration system!
 
-### Adding New Migrations
-
-1. Create a new migration file with the next sequential number:
-
-   ```javascript
-   // migrations/002_add_user_preferences.js
-   exports.up = (pgm) => {
-     pgm.createTable("user_preferences", {
-       id: {
-         type: "uuid",
-         primaryKey: true,
-         default: pgm.func("uuid_generate_v4()"),
-       },
-       user_id: { type: "uuid", references: "users(user_id)" },
-       theme: { type: "varchar", default: "light" },
-       notifications: { type: "boolean", default: true },
-     });
-   };
-
-   exports.down = (pgm) => {
-     pgm.dropTable("user_preferences", { ifExists: true, cascade: true });
-   };
-   ```
-
-   Here is some node-pg-migrate documentation regarding syntax: https://salsita.github.io/node-pg-migrate/migrations/tables
-
-2. Deploy your application - migrations run automatically on deployment
+For a detailed guide on this, refer to the [Database Modification Guide](./databaseModificationGuide.md) (which you should now include in the documentation of your current project)
 
 ## Features
 
